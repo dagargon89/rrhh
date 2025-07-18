@@ -52,7 +52,7 @@ models:
     fecha_ingreso: date
     fecha_baja: date:nullable
     estatus_empleado: enum:Activo,Inactivo,Vacaciones,Permiso,Incapacidad:default('Activo')
-    tipo_contrato: enum:Indefinido,Determinado,Por Proyecto,Honorarios:nullable
+    tipo_contrato: enum:Indefinido,Determinado,Por_Proyecto,Honorarios:nullable
     fecha_fin_contrato: date:nullable
     salario_bruto_mensual: decimal:10,2:nullable
     clabe_interbancaria: string:18:unique:nullable
@@ -61,17 +61,6 @@ models:
 
     # Relaciones
     belongsTo: Puesto, Departamento # Blueprint creará puesto_id y departamento_id
-    hasOne:
-      User:nullable:by(empleado_id) # Relación 1:1 con la tabla users (Blueprint creará empleado_id en users, lo cual hay que ajustar)
-      # OJO: Por defecto, Blueprint creará 'empleado_id' en la tabla 'users'.
-      # Si quieres que 'users.id' se relacione con 'empleados.user_id',
-      # deberemos añadir 'user_id' a Empleado manualmente en la migración
-      # y la relación en el modelo Empleado.
-
-    # Relación recursiva (jefe_directo_id en la misma tabla)
-    # Blueprint no maneja directamente las relaciones recursivas en esta sintaxis concisa.
-    # Necesitarás añadir manualmente `$table->foreignId('jefe_directo_id')->nullable()->constrained('empleados')->onDelete('set null');`
-    # en la migración de Empleado y la relación en el modelo.
 
   DocumentoEmpleado:
     nombre: string
@@ -94,7 +83,6 @@ models:
     observaciones: text:nullable
     # Relaciones
     belongsTo: Empleado
-    # Importante: El índice unique(['empleado_id', 'fecha']) debe agregarse manualmente a la migración generada.
 
   SolicitudVacacion:
     fecha_inicio: date
@@ -140,7 +128,6 @@ models:
     detalles_adicionales: text:nullable # Para almacenar JSON (Blueprint lo interpreta como text)
     # Relaciones
     belongsTo: Empleado
-    # Importante: El índice unique(['empleado_id', 'periodo_pago']) debe agregarse manualmente a la migración.
 
   # Módulo de Reclutamiento y Selección
   Vacante:
@@ -148,8 +135,8 @@ models:
     descripcion: text:nullable
     requisitos: text:nullable
     salario_ofrecido: decimal:10,2:nullable
-    tipo_contrato: enum:Indefinido,Determinado,Por Proyecto:nullable
-    estatus: enum:Abierta,En Proceso,Cerrada,Archivada:default('Abierta')
+    tipo_contrato: enum:Indefinido,Determinado,Por_Proyecto:nullable
+    estatus: enum:Abierta,En_Proceso,Cerrada,Archivada:default('Abierta')
     fecha_publicacion: date
     fecha_cierre: date:nullable
     # Relaciones
@@ -176,20 +163,17 @@ models:
     proveedor: string:nullable
     fecha_inicio: date
     fecha_fin: date:nullable
-    estatus: enum:Programada,En Curso,Completada,Cancelada:default('Programada')
+    estatus: enum:Programada,En_Curso,Completada,Cancelada:default('Programada')
 
   # Tabla pivote para relación muchos a muchos entre Empleado y Capacitacion
-  # Blueprint la creará si defines la relación belongsToMany en ambos modelos.
-  # Aquí la definimos explícitamente para controlar los campos adicionales de la pivote.
-  CapacitacionEmpleado: # Este es un modelo intermedio para la tabla pivote
+  CapacitacionEmpleado:
     capacitacion_id: id:foreign
     empleado_id: id:foreign
     fecha_inscripcion: date
     fecha_finalizacion: date:nullable
-    estatus_participacion: enum:Inscrito,Asistio,Completado,No Asistio:default('Inscrito')
+    estatus_participacion: enum:Inscrito,Asistio,Completado,No_Asistio:default('Inscrito')
     calificacion: integer:nullable
     observaciones: text:nullable
-    # No necesita relaciones belongsTo aquí, ya que se definen en los modelos principales.
 
   # Módulo de Evaluación de Desempeño
   EvaluacionDesempeno:
@@ -199,10 +183,10 @@ models:
     comentarios_generales: text:nullable
     plan_mejora: text:nullable
     fecha_seguimiento: date:nullable
-    estatus: enum:Pendiente,Realizada,EnRevision,Finalizada:default('Pendiente')
+    estatus: enum:Pendiente,Realizada,En_Revision,Finalizada:default('Pendiente')
     # Relaciones
     belongsTo: Empleado
-    evaluador_id: id:foreign:references(id):on(users) # O puede ser empleado_id si se evalúan entre pares
+    evaluador_id: id:foreign:nullable:references(id):on(users) # O puede ser empleado_id si se evalúan entre pares
 
   ObjetivoDesempeno:
     nombre_objetivo: string
@@ -210,6 +194,6 @@ models:
     fecha_limite: date:nullable
     logro_porcentaje: integer:nullable
     comentarios_logro: text:nullable
-    estatus: enum:Pendiente,EnProgreso,Logrado,NoLogrado:default('Pendiente')
+    estatus: enum:Pendiente,En_Progreso,Logrado,No_Logrado:default('Pendiente')
     # Relaciones
     belongsTo: EvaluacionDesempeno
