@@ -1,0 +1,215 @@
+models:
+  # User model (Laravel's default - Blueprint won't generate this by default, but it's good to reference relationships)
+  # No lo definimos aquí explícitamente ya que Laravel lo tiene. Solo lo usaremos para las relaciones.
+
+  # Módulo de Gestión de Empleados
+  Departamento:
+    nombre: string:unique
+    descripcion: string:nullable
+    activo: boolean:default(true)
+
+  Puesto:
+    nombre: string:unique
+    descripcion: string:nullable
+    salario_minimo: decimal:10,2:nullable
+    salario_maximo: decimal:10,2:nullable
+    activo: boolean:default(true)
+    # Relaciones
+    belongsTo: Departamento # Blueprint creará departamento_id
+
+  Empleado:
+    # Datos Personales
+    primer_nombre: string
+    segundo_nombre: string:nullable
+    apellido_paterno: string
+    apellido_materno: string:nullable
+    fecha_nacimiento: date
+    genero: enum:Masculino,Femenino,Otro:nullable
+    nacionalidad: string:default('Mexicana')
+    curp: string:18:unique
+    rfc: string:13:unique
+    nss: string:11:unique:nullable # Número de Seguro Social
+    tipo_sangre: string:nullable
+    estado_civil: string:nullable
+
+    # Contacto
+    telefono_personal: string:nullable
+    telefono_emergencia: string:nullable
+    contacto_emergencia_nombre: string:nullable
+    contacto_emergencia_parentesco: string:nullable
+    email_personal: string:nullable
+
+    # Domicilio
+    calle: string
+    numero_exterior: string:nullable
+    numero_interior: string:nullable
+    colonia: string
+    codigo_postal: string:5
+    ciudad: string
+    estado: string
+
+    # Datos Laborales
+    fecha_ingreso: date
+    fecha_baja: date:nullable
+    estatus_empleado: enum:Activo,Inactivo,Vacaciones,Permiso,Incapacidad:default('Activo')
+    tipo_contrato: enum:Indefinido,Determinado,Por Proyecto,Honorarios:nullable
+    fecha_fin_contrato: date:nullable
+    salario_bruto_mensual: decimal:10,2:nullable
+    clabe_interbancaria: string:18:unique:nullable
+    banco: string:nullable
+    frecuencia_pago: enum:Semanal,Quincenal,Mensual:nullable
+
+    # Relaciones
+    belongsTo: Puesto, Departamento # Blueprint creará puesto_id y departamento_id
+    hasOne:
+      User:nullable:by(empleado_id) # Relación 1:1 con la tabla users (Blueprint creará empleado_id en users, lo cual hay que ajustar)
+      # OJO: Por defecto, Blueprint creará 'empleado_id' en la tabla 'users'.
+      # Si quieres que 'users.id' se relacione con 'empleados.user_id',
+      # deberemos añadir 'user_id' a Empleado manualmente en la migración
+      # y la relación en el modelo Empleado.
+
+    # Relación recursiva (jefe_directo_id en la misma tabla)
+    # Blueprint no maneja directamente las relaciones recursivas en esta sintaxis concisa.
+    # Necesitarás añadir manualmente `$table->foreignId('jefe_directo_id')->nullable()->constrained('empleados')->onDelete('set null');`
+    # en la migración de Empleado y la relación en el modelo.
+
+  DocumentoEmpleado:
+    nombre: string
+    tipo_documento: string
+    ruta_archivo: string
+    extension: string:10
+    fecha_vencimiento: date:nullable
+    comentarios: text:nullable
+    # Relaciones
+    belongsTo: Empleado
+
+  # Módulo de Control de Asistencia y Gestión de Ausencias
+  RegistroAsistencia:
+    fecha: date
+    hora_entrada: time:nullable
+    hora_salida: time:nullable
+    horas_trabajadas: decimal:4,2:nullable
+    horas_extras: decimal:4,2:nullable
+    tipo_registro: string:default('Normal')
+    observaciones: text:nullable
+    # Relaciones
+    belongsTo: Empleado
+    # Importante: El índice unique(['empleado_id', 'fecha']) debe agregarse manualmente a la migración generada.
+
+  SolicitudVacacion:
+    fecha_inicio: date
+    fecha_fin: date
+    dias_solicitados: integer
+    dias_disponibles_al_solicitar: integer:nullable
+    comentarios_empleado: text:nullable
+    fecha_aprobacion: timestamp:nullable
+    estatus: enum:Pendiente,Aprobada,Rechazada,Cancelada:default('Pendiente')
+    razon_rechazo: text:nullable
+    # Relaciones
+    belongsTo: Empleado
+    aprobador_id: id:foreign:nullable:references(id):on(users) # Relaciona con la tabla 'users'
+
+  Permiso:
+    tipo_permiso: string
+    fecha_inicio: date
+    fecha_fin: date
+    dias_permiso: integer
+    con_goce_sueldo: boolean:default(false)
+    folio_incapacidad_imss: string:nullable
+    documento_adjunto: string:nullable
+    comentarios: text:nullable
+    fecha_aprobacion: timestamp:nullable
+    estatus: enum:Pendiente,Aprobado,Rechazado,Cancelado:default('Pendiente')
+    razon_rechazo: text:nullable
+    # Relaciones
+    belongsTo: Empleado
+    aprobador_id: id:foreign:nullable:references(id):on(users) # Relaciona con la tabla 'users'
+
+  # Módulo de Nómina y Prestaciones
+  ReciboNomina:
+    fecha_pago: date
+    periodo_pago: string
+    fecha_inicio_periodo: date
+    fecha_fin_periodo: date
+    salario_bruto: decimal:10,2
+    total_percepciones: decimal:10,2
+    total_deducciones: decimal:10,2
+    salario_neto: decimal:10,2
+    ruta_pdf_recibo: string:nullable
+    xml_uuid: string:unique:nullable # Para relacionar con el CFDI de nómina
+    detalles_adicionales: text:nullable # Para almacenar JSON (Blueprint lo interpreta como text)
+    # Relaciones
+    belongsTo: Empleado
+    # Importante: El índice unique(['empleado_id', 'periodo_pago']) debe agregarse manualmente a la migración.
+
+  # Módulo de Reclutamiento y Selección
+  Vacante:
+    titulo: string
+    descripcion: text:nullable
+    requisitos: text:nullable
+    salario_ofrecido: decimal:10,2:nullable
+    tipo_contrato: enum:Indefinido,Determinado,Por Proyecto:nullable
+    estatus: enum:Abierta,En Proceso,Cerrada,Archivada:default('Abierta')
+    fecha_publicacion: date
+    fecha_cierre: date:nullable
+    # Relaciones
+    belongsTo: Puesto # Una vacante es para un puesto
+
+  Candidato:
+    primer_nombre: string
+    apellido_paterno: string
+    email: string:unique
+    telefono: string:nullable
+    ruta_cv: string:nullable
+    experiencia_laboral: text:nullable
+    educacion: text:nullable
+    estatus_candidato: enum:Nuevo,Revisado,Entrevista,Oferta,Contratado,Rechazado:default('Nuevo')
+    notas: text:nullable
+    # Relaciones
+    belongsTo: Vacante:nullable
+
+  # Módulo de Capacitación y Desarrollo
+  Capacitacion:
+    titulo: string
+    descripcion: text:nullable
+    duracion_horas: integer:nullable
+    proveedor: string:nullable
+    fecha_inicio: date
+    fecha_fin: date:nullable
+    estatus: enum:Programada,En Curso,Completada,Cancelada:default('Programada')
+
+  # Tabla pivote para relación muchos a muchos entre Empleado y Capacitacion
+  # Blueprint la creará si defines la relación belongsToMany en ambos modelos.
+  # Aquí la definimos explícitamente para controlar los campos adicionales de la pivote.
+  CapacitacionEmpleado: # Este es un modelo intermedio para la tabla pivote
+    capacitacion_id: id:foreign
+    empleado_id: id:foreign
+    fecha_inscripcion: date
+    fecha_finalizacion: date:nullable
+    estatus_participacion: enum:Inscrito,Asistio,Completado,No Asistio:default('Inscrito')
+    calificacion: integer:nullable
+    observaciones: text:nullable
+    # No necesita relaciones belongsTo aquí, ya que se definen en los modelos principales.
+
+  # Módulo de Evaluación de Desempeño
+  EvaluacionDesempeno:
+    fecha_evaluacion: date
+    tipo_evaluacion: string # Ej. "Anual", "360 Grados", "Por Objetivos", "Trimestral"
+    calificacion_general: decimal:4,2:nullable
+    comentarios_generales: text:nullable
+    plan_mejora: text:nullable
+    fecha_seguimiento: date:nullable
+    estatus: enum:Pendiente,Realizada,EnRevision,Finalizada:default('Pendiente')
+    # Relaciones
+    belongsTo: Empleado
+    evaluador_id: id:foreign:references(id):on(users) # O puede ser empleado_id si se evalúan entre pares
+
+  ObjetivoDesempeno:
+    nombre_objetivo: string
+    descripcion: text:nullable
+    fecha_limite: date:nullable
+    logro_porcentaje: integer:nullable
+    comentarios_logro: text:nullable
+    estatus: enum:Pendiente,EnProgreso,Logrado,NoLogrado:default('Pendiente')
+    # Relaciones
+    belongsTo: EvaluacionDesempeno
